@@ -20,7 +20,9 @@
 #include <pty.h>
 #endif
 
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#ifndef MAX
+# define MAX(x, y) ((x) > (y) ? (x) : (y))
+#endif
 
 static size_t codepoint_to_utf8(const uint32_t codepoint,
                                 unsigned char buffer[4]) {
@@ -265,7 +267,7 @@ static emacs_value color_to_rgb_string(emacs_env *env, VTermColor color) {
   byte_to_hex(color.blue, buffer + 5);
 
   return env->make_string(env, buffer, 7);
-};
+}
 
 static void erase_buffer(emacs_env *env) {
   emacs_value Ferase_buffer = env->intern(env, "erase-buffer");
@@ -333,7 +335,7 @@ static void vterm_redraw(VTerm *vt, emacs_env *env) {
       } else {
         unsigned char bytes[4];
         size_t count = codepoint_to_utf8(cell.chars[0], bytes);
-        for (int k = 0; k < count; k++) {
+        for (size_t k = 0; k < count; k++) {
           buffer[length] = bytes[k];
           length++;
         }
