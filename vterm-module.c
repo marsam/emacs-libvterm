@@ -91,6 +91,60 @@ static bool utf8_to_codepoint(const unsigned char buffer[4], const size_t len,
   return false;
 }
 
+static void init_termios(struct termios *termios) {
+  // Taken from pangoterm
+  termios->c_iflag = ICRNL|IXON;
+  termios->c_oflag = OPOST|ONLCR;
+#ifdef TAB0
+  termios->c_oflag |= TAB0;
+#endif
+  termios->c_cflag = CS8|CREAD;
+  termios->c_lflag = ISIG|ICANON|IEXTEN|ECHO|ECHOE|ECHOK;
+
+  cfsetspeed(termios, 38400);
+
+#ifdef IUTF8
+  termios->c_iflag |= IUTF8;
+#endif
+#ifdef NL0
+  termios->c_oflag |= NL0;
+#endif
+#ifdef CR0
+  termios->c_oflag |= CR0;
+#endif
+#ifdef BS0
+  termios->c_oflag |= BS0;
+#endif
+#ifdef VT0
+  termios->c_oflag |= VT0;
+#endif
+#ifdef FF0
+  termios->c_oflag |= FF0;
+#endif
+#ifdef ECHOCTL
+  termios->c_lflag |= ECHOCTL;
+#endif
+#ifdef ECHOKE
+  termios->c_lflag |= ECHOKE;
+#endif
+
+  termios->c_cc[VINTR]    = 0x1f & 'C';
+  termios->c_cc[VQUIT]    = 0x1f & '\\';
+  termios->c_cc[VERASE]   = 0x7f;
+  termios->c_cc[VKILL]    = 0x1f & 'U';
+  termios->c_cc[VEOF]     = 0x1f & 'D';
+  termios->c_cc[VEOL]     = _POSIX_VDISABLE;
+  termios->c_cc[VEOL2]    = _POSIX_VDISABLE;
+  termios->c_cc[VSTART]   = 0x1f & 'Q';
+  termios->c_cc[VSTOP]    = 0x1f & 'S';
+  termios->c_cc[VSUSP]    = 0x1f & 'Z';
+  termios->c_cc[VREPRINT] = 0x1f & 'R';
+  termios->c_cc[VWERASE]  = 0x1f & 'W';
+  termios->c_cc[VLNEXT]   = 0x1f & 'V';
+  termios->c_cc[VMIN]     = 1;
+  termios->c_cc[VTIME]    = 0;
+}
+
 /* Bind NAME to FUN.  */
 static void bind_function(emacs_env *env, const char *name, emacs_value Sfun) {
   /* Set the function cell of the symbol named NAME to SFUN using
@@ -336,41 +390,10 @@ static emacs_value Fvterm_new(emacs_env *env, ptrdiff_t nargs,
 
   struct winsize size = {rows, cols, 0, 0};
 
-  // Taken almost verbatim from https://bazaar.launchpad.net/~leonerd/pangoterm
-  struct termios termios = {
-      .c_iflag = ICRNL | IXON,
-      .c_oflag = OPOST | ONLCR,
-      .c_cflag = CS8 | CREAD,
-      .c_lflag = ISIG | ICANON | IEXTEN | ECHO | ECHOE | ECHOK,
-      /* c_cc later */
-  };
-
-  termios.c_iflag |= IUTF8;
-  termios.c_oflag |= NL0;
-  termios.c_oflag |= CR0;
-  termios.c_oflag |= BS0;
-  termios.c_oflag |= VT0;
-  termios.c_oflag |= FF0;
-  termios.c_lflag |= ECHOCTL;
-  termios.c_lflag |= ECHOKE;
-
-  cfsetspeed(&termios, 38400);
-
-  termios.c_cc[VINTR] = 0x1f & 'C';
-  termios.c_cc[VQUIT] = 0x1f & '\\';
-  termios.c_cc[VERASE] = 0x7f;
-  termios.c_cc[VKILL] = 0x1f & 'U';
-  termios.c_cc[VEOF] = 0x1f & 'D';
-  termios.c_cc[VEOL] = _POSIX_VDISABLE;
-  termios.c_cc[VEOL2] = _POSIX_VDISABLE;
-  termios.c_cc[VSTART] = 0x1f & 'Q';
-  termios.c_cc[VSTOP] = 0x1f & 'S';
-  termios.c_cc[VSUSP] = 0x1f & 'Z';
-  termios.c_cc[VREPRINT] = 0x1f & 'R';
-  termios.c_cc[VWERASE] = 0x1f & 'W';
-  termios.c_cc[VLNEXT] = 0x1f & 'V';
-  termios.c_cc[VMIN] = 1;
-  termios.c_cc[VTIME] = 0;
+  static struct termios termios;
+  if (!termios.c_cflag) {
+    init_termios(&termios);
+  }
 
   term->pid = forkpty(&term->masterfd, NULL, &termios, &size);
   fcntl(term->masterfd, F_SETFL, fcntl(term->masterfd, F_GETFL) | O_NONBLOCK);
