@@ -1,10 +1,5 @@
 #include "vterm-module.h"
 #include <fcntl.h>
-#ifdef __APPLE__
-#  include <util.h>
-#else
-#  include <pty.h>
-#endif
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -15,6 +10,15 @@
 #include <termios.h>
 #include <unistd.h>
 #include <vterm.h>
+
+// forkpty is not in POSIX, so headers are platform-specific
+#if defined(__FreeBSD__) || defined(__DragonFly__)
+#include <libutil.h>
+#elif defined(__OpenBSD__) || defined(__NetBSD__) || defined(__APPLE__)
+#include <util.h>
+#else
+#include <pty.h>
+#endif
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
