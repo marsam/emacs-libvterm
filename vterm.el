@@ -1,4 +1,4 @@
-;;; vterm.el --- This package implements a terminal via libvterm
+;;; vterm.el --- This package implements a terminal via libvterm -*- lexical-binding: t -*-
 
 ;;; Commentary:
 ;;
@@ -7,9 +7,10 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'cl-lib)
+  (require 'subr-x))
 (require 'vterm-module)
-(require 'subr-x)
-(require 'cl-lib)
 
 (defvar vterm-term nil
   "Pointer to struct Term.")
@@ -59,6 +60,7 @@ be send to the terminal.")
         (setq key (upcase key)))
       (vterm-update vterm-term key shift meta ctrl))))
 
+;;;###autoload
 (defun vterm-create ()
   "Create a new vterm."
   (interactive)
